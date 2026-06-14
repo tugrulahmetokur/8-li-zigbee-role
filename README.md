@@ -88,10 +88,21 @@ Klasik **OneWire** (Paul Stoffregen) kütüphanesi GPIO'lara doğrudan register
 erişimi yapar ve ESP32-H2'nin yeni `gpio_struct.h` yapısı (esp32 core 3.3.x) ile
 **uyumsuzdur**. Çözüm:
 
-1. Arduino IDE → **Library Manager** → klasik **OneWire**'ı kaldırın.
+1. Eski **OneWire** klasörünü **fiziksel olarak silin** (Library Manager'dan
+   "Remove" bazen klasörü bırakır):
+   ```bash
+   rm -rf ~/Arduino/libraries/OneWire
+   ```
 2. **OneWireNg** (Piotr Stolarz) kurun — ESP32 (classic/S/C/**H**/P) destekler.
 3. OneWireNg, Arduino `OneWire` ile API-uyumlu bir `OneWire.h` sağlar; bu yüzden
    sketch kodu **değişmeden** derlenir.
+
+> **Neden silmek şart?** Hem eski `OneWire` hem OneWireNg `OneWire.h` sağlar.
+> İkisi birden kuruluyken Arduino IDE, **birebir isim eşleşmesi** nedeniyle
+> "OneWire" klasörünü seçip onu derler (hata mesajındaki `.../libraries/OneWire/
+> OneWire.cpp` yolu bunu gösterir). Eski klasör silinince geriye yalnızca
+> OneWireNg'in başlığı kalır. Doğrulama: `ls ~/Arduino/libraries | grep -i onewire`
+> çıktısında sadece `OneWireNg` görünmeli.
 
 ## Eşleştirme / Fabrika Ayarı
 
