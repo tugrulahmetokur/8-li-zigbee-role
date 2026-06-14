@@ -50,6 +50,19 @@ static const uint8_t RELAY_PINS[RELAY_COUNT] = {
 #define RELAY_LEVEL_OFF (!RELAY_ACTIVE_LEVEL)
 
 // -----------------------------------------------------------------------------
+//  2b) KADEMELİ ANAHTARLAMA (ANI YÜK / INRUSH KORUMASI)
+// -----------------------------------------------------------------------------
+//  Birden fazla röle (özellikle boot'ta NVS'ten geri yükleme sırasında) aynı
+//  anda ÇEKİLİRSE ciddi bir ani akım (inrush) oluşur ve besleme çökebilir.
+//  Bunu önlemek için iki fiziksel anahtarlama arasına en az bu kadar süre
+//  konur. İşlem delay() ile DEĞİL, loop() içinde millis tabanlı kuyruk ile
+//  yapılır; yani Zigbee stack bloklanmaz.
+//
+//  Önerilen: 1000–2000 ms. Kartınızın güç bütçesine göre ayarlayın.
+// -----------------------------------------------------------------------------
+#define RELAY_SWITCH_GAP_MS  1500UL   // ardışık röle anahtarlamaları arası min boşluk
+
+// -----------------------------------------------------------------------------
 //  3) SICAKLIK SENSÖRÜ (DS18B20 / OneWire)
 // -----------------------------------------------------------------------------
 #define ONEWIRE_PIN          13      // DS18B20 veri hattı -> GPIO13

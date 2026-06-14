@@ -13,6 +13,7 @@ ESP32-H2 geliştirme kartını, Zigbee 3.0 ağına **Router** olarak katılan,
 | Sıcaklık (Cluster `0x0402`) | `ZigbeeTempSensor` endpoint (9), DS18B20 |
 | Durum hafızası (NVS) | `Preferences` ile tek byte'lık durum maskesi; boot'ta geri yükleme |
 | Asenkron sensör okuma | `millis()` state-machine + `setWaitForConversion(false)` — **bloklama yok** |
+| Ani yük (inrush) koruması | Röleler eşzamanlı değil, aralarında ≥ `RELAY_SWITCH_GAP_MS` ile **tek tek** anahtarlanır (millis kuyruğu, bloklamasız) |
 | Güvenli başlatma | Pinler önce OFF'a çekilir (floating yok), sonra NVS durumu uygulanır |
 | Active-HIGH / Active-LOW | `config.h` içinde tek satır: `RELAY_ACTIVE_LEVEL` |
 | Watchdog | `esp_task_wdt` ile ana döngü korunur |

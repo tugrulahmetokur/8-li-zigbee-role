@@ -64,10 +64,11 @@ void onZbRelayChange(bool state) {
     relays.set(IDX, state, /*persist=*/true);
 }
 
-// Zigbee tarafının görüntülediği durumu, gerçek (NVS'ten gelen) durumla eşitler.
+// Zigbee tarafının görüntülediği durumu, HEDEF (NVS'ten gelen) durumla eşitler.
+// Fiziksel röleler kademeli açılsa da koordinatör nihai hedefi doğru görür.
 void syncZbStateFromRelays() {
     for (uint8_t i = 0; i < RELAY_COUNT; i++) {
-        zbRelays[i].setLight(relays.get(i));   // raporlanan attribute'u güncelle
+        zbRelays[i].setLight(relays.desired(i));   // raporlanan attribute'u güncelle
     }
 }
 
@@ -232,6 +233,7 @@ void setup() {
 void loop() {
     esp_task_wdt_reset();      // <-- Watchdog'u besle (takılma olursa reset gelir)
 
+    relays.service();          // kademeli röle anahtarlama (ani yük/inrush koruması)
     serviceTempSensor();       // asenkron DS18B20
     serviceFactoryReset();     // BOOT uzun basış
 
