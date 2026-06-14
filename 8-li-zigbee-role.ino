@@ -17,25 +17,20 @@
 //    2) Tools > Board            -> "ESP32-H2 Dev Module"
 //    3) Tools > Zigbee mode      -> "Zigbee ZCZR (coordinator/router)"
 //    4) Tools > Partition Scheme -> "Zigbee ZCZR" (zb_storage + zb_fct şart)
-//    5) Library Manager'dan kurun:
-//         - "OneWireNg"         (Piotr Stolarz)  <-- ESP32-H2 uyumlu 1-Wire
-//         - "DallasTemperature" (Miles Burton)
-//       ÖNEMLİ: Klasik "OneWire" (Paul Stoffregen) kütüphanesi ESP32-H2'nin
-//       yeni GPIO register yapisi ile DERLENMEZ. Eski "OneWire" kuruluysa
-//       KALDIRIN; OneWireNg, "OneWire.h" drop-in basligi sagladigindan asagidaki
-//       kod (ve DallasTemperature) degismeden calisir.
-//       (Zigbee, Preferences, esp_task_wdt çekirdekte gelir; kurulum gerekmez.)
+//    5) EK KÜTÜPHANE GEREKMEZ. DS18B20, dahili DS18B20.h sürücüsü ile okunur;
+//       OneWire / OneWireNg / DallasTemperature KURMAYIN. (Zigbee, Preferences,
+//       esp_task_wdt, driver/gpio.h çekirdekte gelir.)
+//       NOT: Daha önce klasik "OneWire" kurduysanız ve hâlâ derleme hatası
+//       alıyorsanız o klasörü silin:  rm -rf ~/Arduino/libraries/OneWire
 // =============================================================================
 
 #include <Arduino.h>
 #include "esp_task_wdt.h"     // Task Watchdog
-#include <OneWire.h>          // DS18B20 1-Wire — OneWireNg'nin drop-in OneWire.h'si
-                              // (klasik OneWire DEGIL; ESP32-H2 uyumu icin)
-#include <DallasTemperature.h>
 
 #include "Zigbee.h"           // Arduino-ESP32 Zigbee kütüphanesi (3.x)
 #include "config.h"
 #include "RelayController.h"
+#include "DS18B20.h"          // Bağımlılıksız DS18B20 sürücüsü (OneWire GEREKMEZ)
 
 // =============================================================================
 //  GLOBAL NESNELER
@@ -51,9 +46,8 @@ ZigbeeLight zbRelays[RELAY_COUNT] = {
 };
 ZigbeeTempSensor zbTemp(ZB_TEMP_ENDPOINT);   // sıcaklık endpoint 9
 
-// DS18B20
-OneWire           oneWire(ONEWIRE_PIN);
-DallasTemperature ds18b20(&oneWire);
+// DS18B20 (kütüphanesiz mini sürücü)
+DS18B20 ds18b20(ONEWIRE_PIN);
 
 // =============================================================================
 //  ZIGBEE -> RÖLE GERİ ÇAĞRIMLARI (callback)
@@ -98,9 +92,10 @@ void setupWatchdog() {
 // =============================================================================
 //  DS18B20 — ASENKRON OKUMA STATE MACHINE
 // -----------------------------------------------------------------------------
-//  setWaitForConversion(false) ile requestTemperatures() bloklamaz; dönüşüm
-//  tamamlanana kadar (~750ms) bekleyip sonucu okuruz. Bu süreçte Zigbee
-//  stack'i ve ana döngü çalışmaya devam eder (delay YOK).
+//  IDLE'da startConversion() ile dönüşümü tetikleriz (BEKLEMEZ); ~750ms sonra
+//  CONVERTING durumunda readTemperature() ile sonucu okuruz. Bekleme süresi
+//  millis ile ölçülür; bu sırada Zigbee stack'i ve ana döngü çalışır (delay YOK).
+//  1-Wire transferinin kendisi yalnızca birkaç ms sürer (30 sn'de bir).
 // =============================================================================
 enum class TempState { IDLE, CONVERTING };
 TempState  tempState     = TempState::IDLE;
@@ -108,11 +103,9 @@ uint32_t   tempLastCycle = 0;   // son ölçüm tetikleme anı
 uint32_t   tempReqAt     = 0;   // dönüşüm isteği gönderim anı
 
 void setupTempSensor() {
-    ds18b20.begin();
-    ds18b20.setResolution(DS18B20_RESOLUTION);
-    ds18b20.setWaitForConversion(false);   // <-- ASENKRON modun anahtarı
+    ds18b20.begin();   // pin open-drain + pull-up; dönüşüm asenkron yürütülecek
 
-    if (ds18b20.getDeviceCount() == 0)
+    if (!ds18b20.isPresent())
         Serial.println("[TEMP] UYARI: DS18B20 bulunamadi (IO13 + 4.7k pull-up kontrol edin)");
     else
         Serial.println("[TEMP] DS18B20 hazir");
@@ -125,7 +118,7 @@ void serviceTempSensor() {
         case TempState::IDLE:
             // 30 sn'de bir yeni dönüşüm başlat (non-blocking).
             if (now - tempLastCycle >= TEMP_READ_INTERVAL_MS) {
-                ds18b20.requestTemperatures();   // bloklamaz
+                ds18b20.startConversion();   // 0x44 gönder, BEKLEME yapma
                 tempReqAt     = now;
                 tempLastCycle = now;
                 tempState     = TempState::CONVERTING;
@@ -135,12 +128,12 @@ void serviceTempSensor() {
         case TempState::CONVERTING:
             // Dönüşüm penceresi dolunca sonucu oku ve Zigbee'ye raporla.
             if (now - tempReqAt >= TEMP_CONVERSION_MS) {
-                float c = ds18b20.getTempCByIndex(0);
-                if (c != DEVICE_DISCONNECTED_C && c > -100.0f) {
+                float c;
+                if (ds18b20.readTemperature(c)) {
                     zbTemp.setTemperature(c);    // 0x0402 attribute güncelle + raporla
                     Serial.printf("[TEMP] %.2f C -> Zigbee'ye raporlandi\n", c);
                 } else {
-                    Serial.println("[TEMP] Okuma hatasi (sensor baglantisi?)");
+                    Serial.println("[TEMP] Okuma hatasi (CRC/baglanti) - sonraki turda yeniden denenecek");
                 }
                 tempState = TempState::IDLE;
             }

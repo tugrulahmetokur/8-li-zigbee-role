@@ -40,7 +40,8 @@ Aynı klasördeki `.h` dosyaları otomatik derlenir.
 8-li-zigbee-role/
 ├── 8-li-zigbee-role.ino   # Ana sketch: Zigbee kurulumu, asenkron sensör, WDT
 ├── config.h               # Pin/ayar merkezi (active-level, zamanlama, endpoint)
-└── RelayController.h       # 8 röle sınıfı + NVS durum hafızası + güvenli init
+├── RelayController.h       # 8 röle sınıfı + NVS durum hafızası + güvenli init
+└── DS18B20.h               # Bağımlılıksız 1-Wire DS18B20 sürücüsü (OneWire gerekmez)
 ```
 
 ## Neden Arduino-ESP32 (ESP-IDF yerine)?
@@ -71,38 +72,35 @@ geçiş mantıklıdır; bu iskelet o aşamaya kadar fazlasıyla yeterlidir.
    - Bu seçim, Router yığınını derler (`-DZIGBEE_MODE_ZCZR`).
 4. **Tools → Partition Scheme** → *Zigbee ZCZR*.
    - Zigbee için `zb_storage` + `zb_fct` partition'larını içerir (**zorunlu**).
-5. **Library Manager** → şu kütüphaneleri kurun:
-   - **OneWireNg** (Piotr Stolarz) — ESP32-H2 uyumlu 1-Wire kütüphanesi.
-   - **DallasTemperature** (Miles Burton)
-   - *(Zigbee, Preferences, esp_task_wdt çekirdekte gelir — ayrı kurulum yok.)*
-   - ⚠️ Klasik **OneWire** (Paul Stoffregen) kuruluysa **KALDIRIN** — ESP32-H2'de
-     derlenmez (bkz. Sorun Giderme). OneWireNg `OneWire.h` drop-in sağladığı için
-     koddaki `#include <OneWire.h>` ve `OneWire oneWire(...)` aynen çalışır.
+5. **Ek kütüphane GEREKMEZ.** DS18B20, depodaki bağımlılıksız `DS18B20.h`
+   sürücüsü ile okunur. **OneWire / OneWireNg / DallasTemperature kurmayın.**
+   *(Zigbee, Preferences, esp_task_wdt ve `driver/gpio.h` çekirdekte gelir.)*
 6. Sketch'i derleyip karta yükleyin; **Serial Monitor**'ı 115200 baud açın.
 
 ## Sorun Giderme
 
 ### `OneWire_direct_gpio.h: ... 'gpio_dev_t' has no member named 'in1'` derleme hatası
 
-Klasik **OneWire** (Paul Stoffregen) kütüphanesi GPIO'lara doğrudan register
-erişimi yapar ve ESP32-H2'nin yeni `gpio_struct.h` yapısı (esp32 core 3.3.x) ile
-**uyumsuzdur**. Çözüm:
+Bu hata, klasik **OneWire** (Paul Stoffregen) kütüphanesinden gelir: GPIO'lara
+doğrudan register erişimi yapar ve ESP32-H2'nin yeni `gpio_struct.h` yapısı
+(esp32 core 3.3.x) ile **uyumsuzdur**.
 
-1. Eski **OneWire** klasörünü **fiziksel olarak silin** (Library Manager'dan
-   "Remove" bazen klasörü bırakır):
-   ```bash
-   rm -rf ~/Arduino/libraries/OneWire
-   ```
-2. **OneWireNg** (Piotr Stolarz) kurun — ESP32 (classic/S/C/**H**/P) destekler.
-3. OneWireNg, Arduino `OneWire` ile API-uyumlu bir `OneWire.h` sağlar; bu yüzden
-   sketch kodu **değişmeden** derlenir.
+Bu proje artık OneWire'a **hiç ihtiyaç duymaz** (kendi `DS18B20.h` sürücüsünü
+kullanır). Yine de bu hatayı alıyorsanız, makinenizde **eski OneWire klasörü
+duruyordur** ve `#include <OneWire.h>` içeren başka bir kütüphane (ör.
+DallasTemperature) onu derlemeye zorluyordur. Kalıcı çözüm — eski klasörü
+**fiziksel olarak silin**:
 
-> **Neden silmek şart?** Hem eski `OneWire` hem OneWireNg `OneWire.h` sağlar.
-> İkisi birden kuruluyken Arduino IDE, **birebir isim eşleşmesi** nedeniyle
-> "OneWire" klasörünü seçip onu derler (hata mesajındaki `.../libraries/OneWire/
-> OneWire.cpp` yolu bunu gösterir). Eski klasör silinince geriye yalnızca
-> OneWireNg'in başlığı kalır. Doğrulama: `ls ~/Arduino/libraries | grep -i onewire`
-> çıktısında sadece `OneWireNg` görünmeli.
+```bash
+rm -rf ~/Arduino/libraries/OneWire
+# varsa DallasTemperature de bu projede gereksizdir:
+rm -rf ~/Arduino/libraries/DallasTemperature
+```
+
+> Hata mesajındaki `.../libraries/OneWire/OneWire.cpp` yolu, eski klasörün hâlâ
+> kurulu olduğunu kanıtlar — Library Manager'dan "Remove" bazen klasörü diskte
+> bırakır, bu yüzden doğrudan silmek en garantili yöntemdir. Doğrulama:
+> `ls ~/Arduino/libraries | grep -i onewire` çıktısı **boş** olmalı.
 
 ## Eşleştirme / Fabrika Ayarı
 
