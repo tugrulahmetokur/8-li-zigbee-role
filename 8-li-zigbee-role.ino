@@ -18,14 +18,19 @@
 //    3) Tools > Zigbee mode      -> "Zigbee ZCZR (coordinator/router)"
 //    4) Tools > Partition Scheme -> "Zigbee ZCZR" (zb_storage + zb_fct şart)
 //    5) Library Manager'dan kurun:
-//         - "OneWire"           (Paul Stoffregen)
+//         - "OneWireNg"         (Piotr Stolarz)  <-- ESP32-H2 uyumlu 1-Wire
 //         - "DallasTemperature" (Miles Burton)
+//       ÖNEMLİ: Klasik "OneWire" (Paul Stoffregen) kütüphanesi ESP32-H2'nin
+//       yeni GPIO register yapisi ile DERLENMEZ. Eski "OneWire" kuruluysa
+//       KALDIRIN; OneWireNg, "OneWire.h" drop-in basligi sagladigindan asagidaki
+//       kod (ve DallasTemperature) degismeden calisir.
 //       (Zigbee, Preferences, esp_task_wdt çekirdekte gelir; kurulum gerekmez.)
 // =============================================================================
 
 #include <Arduino.h>
 #include "esp_task_wdt.h"     // Task Watchdog
-#include <OneWire.h>          // DS18B20 1-Wire
+#include <OneWire.h>          // DS18B20 1-Wire — OneWireNg'nin drop-in OneWire.h'si
+                              // (klasik OneWire DEGIL; ESP32-H2 uyumu icin)
 #include <DallasTemperature.h>
 
 #include "Zigbee.h"           // Arduino-ESP32 Zigbee kütüphanesi (3.x)

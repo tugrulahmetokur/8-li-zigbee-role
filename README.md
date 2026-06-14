@@ -72,10 +72,26 @@ geçiş mantıklıdır; bu iskelet o aşamaya kadar fazlasıyla yeterlidir.
 4. **Tools → Partition Scheme** → *Zigbee ZCZR*.
    - Zigbee için `zb_storage` + `zb_fct` partition'larını içerir (**zorunlu**).
 5. **Library Manager** → şu kütüphaneleri kurun:
-   - **OneWire** (Paul Stoffregen)
+   - **OneWireNg** (Piotr Stolarz) — ESP32-H2 uyumlu 1-Wire kütüphanesi.
    - **DallasTemperature** (Miles Burton)
    - *(Zigbee, Preferences, esp_task_wdt çekirdekte gelir — ayrı kurulum yok.)*
+   - ⚠️ Klasik **OneWire** (Paul Stoffregen) kuruluysa **KALDIRIN** — ESP32-H2'de
+     derlenmez (bkz. Sorun Giderme). OneWireNg `OneWire.h` drop-in sağladığı için
+     koddaki `#include <OneWire.h>` ve `OneWire oneWire(...)` aynen çalışır.
 6. Sketch'i derleyip karta yükleyin; **Serial Monitor**'ı 115200 baud açın.
+
+## Sorun Giderme
+
+### `OneWire_direct_gpio.h: ... 'gpio_dev_t' has no member named 'in1'` derleme hatası
+
+Klasik **OneWire** (Paul Stoffregen) kütüphanesi GPIO'lara doğrudan register
+erişimi yapar ve ESP32-H2'nin yeni `gpio_struct.h` yapısı (esp32 core 3.3.x) ile
+**uyumsuzdur**. Çözüm:
+
+1. Arduino IDE → **Library Manager** → klasik **OneWire**'ı kaldırın.
+2. **OneWireNg** (Piotr Stolarz) kurun — ESP32 (classic/S/C/**H**/P) destekler.
+3. OneWireNg, Arduino `OneWire` ile API-uyumlu bir `OneWire.h` sağlar; bu yüzden
+   sketch kodu **değişmeden** derlenir.
 
 ## Eşleştirme / Fabrika Ayarı
 
