@@ -1,10 +1,11 @@
 // =============================================================================
 //  8-li-zigbee-role.ino
-//  ESP32-H2 Zigbee Router: 8 Kanal Röle + DS18B20 Sıcaklık Düğümü
+//  ESP32-H2 Zigbee End Device: 8 Kanal Röle + DS18B20 Sıcaklık Düğümü
 // -----------------------------------------------------------------------------
 //  Mimari özet:
-//    * Zigbee ROUTER olarak ağa katılır (sürekli enerjili cihaz -> menzili
-//      genişletir, mesh repeater görevi görür).
+//    * Zigbee END DEVICE (uç cihaz) olarak ağa katılır. Sleepy DEĞİLDİR;
+//      mains beslemeli olduğu için sürekli dinlemede kalır (rx-on-when-idle),
+//      böylece röle komutlarını anında alır. (Menzil uzatma görevi yoktur.)
 //    * 8 adet On/Off endpoint (Cluster 0x0006) -> her biri bir röleyi sürer.
 //    * 1 adet Temperature Measurement endpoint (Cluster 0x0402) -> DS18B20.
 //    * Röle durumları NVS'te tutulur, boot'ta otomatik geri yüklenir.
@@ -15,8 +16,8 @@
 //  ARDUINO IDE KURULUMU (önemli!):
 //    1) Boards Manager -> "esp32" paketi 3.x kurun (Espressif Systems).
 //    2) Tools > Board            -> "ESP32-H2 Dev Module"
-//    3) Tools > Zigbee mode      -> "Zigbee ZCZR (coordinator/router)"
-//    4) Tools > Partition Scheme -> "Zigbee ZCZR" (zb_storage + zb_fct şart)
+//    3) Tools > Zigbee mode      -> "Zigbee ED (end device)"
+//    4) Tools > Partition Scheme -> "Zigbee ZED" (zb_storage + zb_fct şart)
 //    5) EK KÜTÜPHANE GEREKMEZ. DS18B20, dahili DS18B20.h sürücüsü ile okunur;
 //       OneWire / OneWireNg / DallasTemperature KURMAYIN. (Zigbee, Preferences,
 //       esp_task_wdt, driver/gpio.h çekirdekte gelir.)
@@ -200,9 +201,11 @@ void setup() {
     zbTemp.setReporting(0, 30, TEMP_TOLERANCE_C);
     Zigbee.addEndpoint(&zbTemp);
 
-    // 4) ROUTER modunda ağa katıl.
-    Serial.println("[ZB] Router olarak baslatiliyor...");
-    if (!Zigbee.begin(ZIGBEE_ROUTER)) {
+    // 4) END DEVICE (uç cihaz) modunda ağa katıl.
+    //    NOT: Sleepy YAPILMAZ; mains beslemeli cihaz sürekli dinlemede kalır
+    //    (rx-on-when-idle) ki röle on/off komutlarını anında alabilsin.
+    Serial.println("[ZB] End device olarak baslatiliyor...");
+    if (!Zigbee.begin(ZIGBEE_END_DEVICE)) {
         Serial.println("[ZB] HATA: Zigbee baslatilamadi -> yeniden baslatiliyor");
         delay(1000);
         ESP.restart();

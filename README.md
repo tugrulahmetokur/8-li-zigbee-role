@@ -1,14 +1,14 @@
 # ESP32-H2 · 8 Kanal Zigbee Röle + DS18B20 Sıcaklık Düğümü (Arduino IDE)
 
-ESP32-H2 geliştirme kartını, Zigbee 3.0 ağına **Router** olarak katılan,
-8 kanallı röle kontrolcüsü ve ortam sıcaklık sensörü düğümüne dönüştüren
-**Arduino IDE** firmware iskeleti.
+ESP32-H2 geliştirme kartını, Zigbee 3.0 ağına **Uç Cihaz (End Device, non-sleepy)**
+olarak katılan, 8 kanallı röle kontrolcüsü ve ortam sıcaklık sensörü düğümüne
+dönüştüren **Arduino IDE** firmware iskeleti.
 
 ## Özellikler
 
 | Gereksinim | Karşılanma şekli |
 |---|---|
-| Zigbee Router | `Zigbee.begin(ZIGBEE_ROUTER)` — sürekli enerjili, mesh repeater |
+| Zigbee End Device | `Zigbee.begin(ZIGBEE_END_DEVICE)` — non-sleepy (rx-on), komutları anında alır |
 | 8x On/Off (Cluster `0x0006`) | 8 ayrı `ZigbeeLight` endpoint (1..8) |
 | Sıcaklık (Cluster `0x0402`) | `ZigbeeTempSensor` endpoint (9), DS18B20 |
 | Durum hafızası (NVS) | `Preferences` ile tek byte'lık durum maskesi; boot'ta geri yükleme |
@@ -68,9 +68,9 @@ geçiş mantıklıdır; bu iskelet o aşamaya kadar fazlasıyla yeterlidir.
 
 1. **Boards Manager** → `esp32` paketini **3.x** kurun (Espressif Systems).
 2. **Tools → Board** → *ESP32-H2 Dev Module*.
-3. **Tools → Zigbee mode** → *Zigbee ZCZR (coordinator/router)*.
-   - Bu seçim, Router yığınını derler (`-DZIGBEE_MODE_ZCZR`).
-4. **Tools → Partition Scheme** → *Zigbee ZCZR*.
+3. **Tools → Zigbee mode** → *Zigbee ED (end device)*.
+   - Bu seçim, uç-cihaz yığınını derler (`-DZIGBEE_MODE_ED`).
+4. **Tools → Partition Scheme** → *Zigbee ZED*.
    - Zigbee için `zb_storage` + `zb_fct` partition'larını içerir (**zorunlu**).
 5. **Ek kütüphane GEREKMEZ.** DS18B20, depodaki bağımlılıksız `DS18B20.h`
    sürücüsü ile okunur. **OneWire / OneWireNg / DallasTemperature kurmayın.**
